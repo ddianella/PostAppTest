@@ -1,0 +1,96 @@
+//
+//  DetailPostViewController.swift
+//  PostsApp
+//
+//  Created by Prince$$ Di on 17.08.2022.
+//
+
+import UIKit
+import Combine
+
+class ConcretePostDetailsViewController: UIViewController {
+    
+    @IBOutlet weak var postImageView: UIImageView!
+    @IBOutlet weak var titleLabel: UILabel!
+    @IBOutlet weak var previewTextView: UITextView!
+    @IBOutlet weak var likesCountLabel: UILabel!
+    @IBOutlet weak var timeshampLabel: UILabel!
+    
+    var concretePostDetailsViewModel: ConcretePostDetailsViewModel!
+    var setForDetailedPost = Set<AnyCancellable>()
+    let spinner = SpinnerViewController()
+    
+    @Published var loading = false
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        createSpinnerView()
+        fetchConcretePost()
+    }
+    
+    func fetchConcretePost() {
+        concretePostDetailsViewModel.$concretePostDetail
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] detailedPost in
+                if let post = detailedPost {
+                    self!.setItemsForDetailedPost(concretePostDetails: post)
+                    self!.removeSpinnerView()
+                }
+            }
+            .store(in: &setForDetailedPost)
+    }
+    
+    func createSpinnerView() {
+        addChild(spinner)
+        spinner.view.frame = view.frame
+        view.addSubview(spinner.view)
+        spinner.didMove(toParent: self)
+    }
+    
+    func removeSpinnerView() {
+        spinner.willMove(toParent: nil)
+        spinner.view.removeFromSuperview()
+        spinner.removeFromParent()
+        
+        postImageView.isHidden = false
+        titleLabel.isHidden = false
+        previewTextView.isHidden = false
+        likesCountLabel.isHidden = false
+        timeshampLabel.isHidden = false
+    }
+    
+    func setItemsForDetailedPost(concretePostDetails: ConcretePostDetail) {
+        titleLabel.text = concretePostDetails.title
+        titleLabel.numberOfLines = 0
+        previewTextView.text = concretePostDetails.text
+        postImageView.image = UIImage(url: URL(string: concretePostDetails.postImage))
+        postImageView.contentMode = .scaleAspectFill
+        likesCountLabel.text = String("❤️\(concretePostDetails.likes_count)")
+        getFormattedDate(date: concretePostDetails.timeshamp, label: timeshampLabel)
+    }
+    
+    func getFormattedDate(date: Int, label: UILabel) {
+        let date = Date(timeIntervalSince1970: TimeInterval(date))
+        let formattedDate = Date.FormatStyle()
+            .locale(Locale(identifier: "en_GB"))
+            .year()
+            .month()
+            .day()
+        
+        label.text = formattedDate.format(date)
+    }
+}
+
+extension UIImage {
+    convenience init?(url: URL?) {
+        guard let url = url else { return nil }
+        
+        do {
+            self.init(data: try Data(contentsOf: url))
+        } catch {
+            print("Cannot load image from url: \(url) with error: \(error)")
+            return nil
+        }
+    }
+}
